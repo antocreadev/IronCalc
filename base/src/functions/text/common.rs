@@ -7,7 +7,10 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    formatter::format::{format_number, parse_formatted_number},
+    formatter::{
+        format::{format_number, parse_formatted_number},
+        localized,
+    },
     functions::{
         text::util::{substitute, text_after, text_before, Case},
         util::from_wildcard_to_regex,
@@ -404,6 +407,12 @@ impl<'a> Model<'a> {
         }
         CalcResult::String(result)
     }
+    /// The format code of TEXT is written in the workbook's locale (`"jj/mm/aaaa"` in French);
+    /// the formatter reads the canonical (en-US) form.
+    fn canonical_format_code(&self, format_code: &str) -> String {
+        localized::to_canonical(format_code, &self.workbook.settings.locale, self.locale)
+    }
+
     pub(crate) fn fn_text(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         use crate::expressions::parser::ArrayNode;
         if args.len() != 2 {
@@ -431,6 +440,7 @@ impl<'a> Model<'a> {
                     }
                 };
                 let locale = self.locale;
+                let format_code = self.canonical_format_code(&format_code);
                 let date_system = self.date_system();
                 let mut output = Vec::with_capacity(arr.len());
                 for row in arr {
@@ -468,7 +478,7 @@ impl<'a> Model<'a> {
                 // The format comes before the value is looked at: an error in
                 // it is the result, whatever the value, as for an array
                 let format_code = match self.get_string(&args[1], cell) {
-                    Ok(s) => s,
+                    Ok(s) => self.canonical_format_code(&s),
                     Err(s) => return s,
                 };
                 let value = match other {

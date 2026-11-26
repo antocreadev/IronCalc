@@ -1,6 +1,7 @@
 pub mod dates;
 pub mod format;
 pub mod lexer;
+pub(crate) mod localized;
 pub mod parser;
 
 #[cfg(test)]
